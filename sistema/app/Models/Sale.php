@@ -13,7 +13,7 @@ class Sale extends Model
     protected function casts(): array
     {
         return ['date' => 'datetime',
-                'total' => 'decimal:2', 'igv' => 'decimal:2'];
+            'total' => 'decimal:2', 'igv' => 'decimal:2'];
     }
 
     public function customer(): BelongsTo
