@@ -21,6 +21,8 @@
             </div>
         </div>
         <div class="card-body">
+            @include('partials.alerts')
+
             <h6 class="text-uppercase small text-muted mb-3">Total de registros encontrados: {{ $roles->count() }}</h6>
             <table id="display" class="table table-sm table-hover w-100 bg-white">
                 <thead>
@@ -32,36 +34,34 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @php
-                        $contador = 1;
-                    @endphp
-                    @foreach($roles as $role)
+                    @forelse ($roles as $role)
                         <tr>
-                            <td class="text-center align-middle">{{ $contador }}</td>
+                            <td class="text-center align-middle">{{ $loop->iteration }}</td>
                             <td class="text-start align-middle">{{ $role->name }}</td>
-                            <td class="text-start align-middle">{{ $role->description }}</td>
+                            <td class="text-start align-middle">{{ $role->description ?? '—' }}</td>
                             <td class="text-center align-middle">
                                 <div class="dropdown">
                                     <button class="btn btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="{{ route('roles.edit', $role->id) }}">Editar</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('roles.edit', $role) }}">Editar</a></li>
                                         <li>
-                                            <form action="{{ route('roles.destroy', $role->id) }}" method="POST" onsubmit="return confirm('¿Estas seguro de eliminar este registro?');">
+                                            <form action="{{ route('roles.destroy', $role) }}" method="POST" onsubmit="return confirm('¿Seguro que desea eliminar este rol?')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="dropdown-item">Eliminar</button>
+                                                <button type="submit" class="dropdown-item text-danger">Eliminar</button>
                                             </form>
                                         </li>
                                     </ul>
                                 </div>
                             </td>
                         </tr>
-                        @php
-                            $contador++;
-                        @endphp
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">No hay roles registrados</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

@@ -46,8 +46,6 @@
           </nav>
         </div>
 
-        @include('partials.alertas')
-
         <!--
             CONTENIDO DE LA VISTA
             Aquí va el contenido específico de cada página

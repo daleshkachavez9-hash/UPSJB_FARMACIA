@@ -14,9 +14,8 @@
     <div class="card-body">
         <form action="{{ route('categories.store') }}" method="POST">
             @csrf
-            @include('settings.categories._form')
+            @include('settings.categories.form')
         </form>
     </div>
 </div>
-
 @endsection

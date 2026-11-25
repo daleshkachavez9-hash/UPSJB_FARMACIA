@@ -14,9 +14,8 @@
     <div class="card-body">
         <form action="{{ route('roles.store') }}" method="POST">
             @csrf
-            @include('settings.roles._form')
+            @include('settings.roles.form')
         </form>
     </div>
 </div>
-
 @endsection
