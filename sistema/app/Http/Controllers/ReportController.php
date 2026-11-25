@@ -2,57 +2,82 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DetailSale;
-use App\Models\Medicine;
+use App\Models\Category;
 use App\Models\Sale;
+use App\Models\User;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class ReportController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Reporte de ventas filtrado por periodo, vendedor y categoría.
+     */
+    public function sales(Request $request)
     {
-        $dates = Validator::make($request->only('from', 'to'), [
-            'from' => 'nullable|date_format:Y-m-d',
-            'to' => 'nullable|date_format:Y-m-d',
-        ])->valid();
+        // Validación de los filtros (todos son opcionales)
+        $filters = $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+        ]);
 
-        $from = isset($dates['from']) ? Carbon::parse($dates['from']) : now()->startOfMonth();
-        $to = isset($dates['to']) ? Carbon::parse($dates['to']) : now();
+        // Si no se envían fechas se muestra el mes actual hasta hoy
+        $from = isset($filters['from']) ? Carbon::parse($filters['from']) : now()->startOfMonth();
+        $to = isset($filters['to']) ? Carbon::parse($filters['to']) : now();
 
+        // Si las fechas vienen invertidas se intercambian
         if ($from->gt($to)) {
             [$from, $to] = [$to, $from];
         }
 
-        $range = [$from->copy()->startOfDay(), $to->copy()->endOfDay()];
+        $from = $from->copy()->startOfDay();
+        $to = $to->copy()->endOfDay();
 
+        $userId = $filters['user_id'] ?? null;
+        $categoryId = $filters['category_id'] ?? null;
+
+        // Ventas del periodo aplicando los filtros elegidos
         $sales = Sale::with(['customer', 'user'])
-            ->whereBetween('date', $range)
-            ->latest('date')
-            ->get();
-
-        $totalSales = $sales->sum('total');
-        $totalIgv = $sales->sum('igv');
-
-        $topMedicines = DetailSale::with('medicine')
-            ->select('medicine_id', DB::raw('SUM(amount) as quantity'), DB::raw('SUM(subtotal) as amount'))
-            ->whereHas('sale', function ($query) use ($range) {
-                $query->whereBetween('date', $range);
+            ->whereBetween('date', [$from, $to])
+            ->when($userId, function ($query) use ($userId) {
+                $query->where('user_id', $userId);
             })
-            ->groupBy('medicine_id')
-            ->orderByDesc('quantity')
-            ->take(5)
+            ->when($categoryId, function ($query) use ($categoryId) {
+                // Solo ventas que incluyen al menos un medicamento de la categoría
+                $query->whereHas('details.medicine', function ($medicine) use ($categoryId) {
+                    $medicine->where('category_id', $categoryId);
+                });
+            })
+            ->orderBy('date')
             ->get();
 
-        $lowStockMedicines = Medicine::with('category')
-            ->where('stock', '<=', MedicineController::LOW_STOCK)
-            ->orderBy('stock')
-            ->get();
+        // Tarjetas de resumen
+        $totalSold = $sales->sum('total');
+        $salesCount = $sales->count();
+        $averageTicket = $salesCount > 0 ? $totalSold / $salesCount : 0;
 
-        return view('principal.reports.index', compact(
-            'from', 'to', 'sales', 'totalSales', 'totalIgv', 'topMedicines', 'lowStockMedicines'
+        // Gráfico de barras: total vendido por cada día del periodo (los días sin ventas van en 0)
+        $salesByDay = $sales->groupBy(fn ($sale) => $sale->date->format('Y-m-d'));
+
+        $dayLabels = [];
+        $dayTotals = [];
+        foreach (CarbonPeriod::create($from, '1 day', $to) as $day) {
+            $dayLabels[] = $day->format('d/m/Y');
+            $dayTotals[] = round((float) ($salesByDay->get($day->format('Y-m-d'))?->sum('total') ?? 0), 2);
+        }
+
+        // Opciones de los selectores
+        $users = User::orderBy('name')->get(['id', 'name']);
+        $categories = Category::orderBy('name')->get(['id', 'name']);
+
+        return view('principal.reports.sales', compact(
+            'from', 'to', 'userId', 'categoryId',
+            'sales', 'totalSold', 'salesCount', 'averageTicket',
+            'dayLabels', 'dayTotals',
+            'users', 'categories'
         ));
     }
 }

@@ -42,4 +42,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Sale::class);
     }
+
+    public function hasRole(...$roles): bool
+    {
+        return $this->role !== null && in_array($this->role->name, $roles, true);
+    }
 }
