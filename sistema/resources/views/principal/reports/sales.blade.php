@@ -124,7 +124,27 @@
 {{-- Tabla con el detalle de las ventas filtradas --}}
 <div class="card bg-white border-0 shadow-sm border-5 border-top border-secondary">
     <div class="card-body">
-        <h6 class="fw-bold mb-3">Detalle de ventas</h6>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <h6 class="fw-bold mb-0">Detalle de ventas</h6>
+
+            {{-- Descargas con los mismos filtros de la pantalla --}}
+            @php
+                $exportFilters = array_filter([
+                    'from' => $from->format('Y-m-d'),
+                    'to' => $to->format('Y-m-d'),
+                    'user_id' => $userId,
+                    'category_id' => $categoryId,
+                ]);
+            @endphp
+            <div class="d-flex gap-2">
+                <a href="{{ route('reports.sales.pdf', $exportFilters) }}" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                </a>
+                <a href="{{ route('reports.sales.excel', $exportFilters) }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                </a>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
